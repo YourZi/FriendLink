@@ -16,4 +16,4 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = 'official-p2p-26-1-backport'
+rootProject.name = 'FriendLink'

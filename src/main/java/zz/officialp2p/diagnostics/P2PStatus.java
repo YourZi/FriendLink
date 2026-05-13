@@ -16,11 +16,11 @@ public record P2PStatus(
 ) {
     public List<String> toChatLines() {
         List<String> lines = new ArrayList<>();
-        lines.add("[OfficialP2P] player=" + playerName + " uuid=" + profileId);
-        lines.add("[OfficialP2P] accessToken=" + yesNo(hasAccessToken) + " xuid=" + yesNo(hasXuid) + " clientId=" + yesNo(hasClientId));
-        lines.add("[OfficialP2P] WebRTC api=" + yesNo(webRtcApiPresent));
+        lines.add("[FriendLink] player=" + playerName + " uuid=" + profileId);
+        lines.add("[FriendLink] accessToken=" + yesNo(hasAccessToken) + " xuid=" + yesNo(hasXuid) + " clientId=" + yesNo(hasClientId));
+        lines.add("[FriendLink] WebRTC api=" + yesNo(webRtcApiPresent));
         if (!missingClasses.isEmpty()) {
-            lines.add("[OfficialP2P] missing=" + String.join(", ", missingClasses));
+            lines.add("[FriendLink] missing=" + String.join(", ", missingClasses));
         }
         return lines;
     }

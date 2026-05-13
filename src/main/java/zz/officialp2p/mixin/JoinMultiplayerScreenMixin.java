@@ -9,6 +9,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import zz.officialp2p.gui.P2PConnectScreen;
+import zz.officialp2p.i18n.P2PTexts;
 
 @Mixin(JoinMultiplayerScreen.class)
 public abstract class JoinMultiplayerScreenMixin extends Screen {
@@ -18,7 +19,7 @@ public abstract class JoinMultiplayerScreenMixin extends Screen {
 
     @Inject(method = "init", at = @At("TAIL"))
     private void officialP2P$addButton(CallbackInfo ci) {
-        this.addRenderableWidget(Button.builder(Component.literal("好友联机"), button ->
+        this.addRenderableWidget(Button.builder(P2PTexts.c("button.friend_multiplayer"), button ->
                 this.minecraft.setScreen(new P2PConnectScreen((Screen) (Object) this)))
             .bounds(this.width - 112, 8, 104, 20)
             .build());

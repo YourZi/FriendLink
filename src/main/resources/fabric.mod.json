@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "official_p2p_backport",
+  "id": "friendlink",
   "version": "${version}",
-  "name": "Official P2P 26.1 Backport",
-  "description": "Experimental backport scaffold for Mojang official friends and P2P transport on Minecraft 26.1.2.",
+  "name": "FriendLink",
+  "description": "Friend-based official P2P multiplayer backport for Minecraft 26.1.2.",
   "authors": [
     "ZzaiQWQ"
   ],
@@ -15,9 +15,9 @@
     ]
   },
   "mixins": [
-    "official_p2p_backport.mixins.json"
+    "friendlink.mixins.json"
   ],
-  "accessWidener": "official_p2p_backport.accesswidener",
+  "accessWidener": "friendlink.accesswidener",
   "depends": {
     "fabricloader": ">=0.18.4",
     "minecraft": "26.1.2",

@@ -10,6 +10,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import zz.officialp2p.gui.P2PConnectScreen;
 import zz.officialp2p.gui.P2PUiActions;
+import zz.officialp2p.i18n.P2PTexts;
 
 @Mixin(PauseScreen.class)
 public abstract class PauseScreenMixin extends Screen {
@@ -19,20 +20,22 @@ public abstract class PauseScreenMixin extends Screen {
 
     @Inject(method = "init", at = @At("TAIL"))
     private void officialP2P$addButton(CallbackInfo ci) {
-        this.addRenderableWidget(Button.builder(Component.literal("P2P开房"), button -> {
-                button.setMessage(Component.literal("开房中..."));
+        this.addRenderableWidget(Button.builder(P2PTexts.c("button.p2p_host"), button -> {
+                button.setMessage(P2PTexts.c("button.listening"));
                 button.active = false;
                 P2PUiActions.listen(this.minecraft, message -> {
-                    if (!message.startsWith("正在连接")) {
+                    if (!message.startsWith(P2PTexts.s("status.signaling_connecting"))) {
                         button.active = true;
                     }
-                    button.setMessage(Component.literal(message.startsWith("开房成功") ? "开房成功" : "P2P开房"));
+                    button.setMessage(message.startsWith(P2PTexts.s("status.listen_success"))
+                        ? P2PTexts.c("status.listen_success")
+                        : P2PTexts.c("button.p2p_host"));
                 });
             })
             .bounds(this.width - 224, 8, 104, 20)
             .build());
 
-        this.addRenderableWidget(Button.builder(Component.literal("好友联机"), button ->
+        this.addRenderableWidget(Button.builder(P2PTexts.c("button.friend_multiplayer"), button ->
                 this.minecraft.setScreen(new P2PConnectScreen((Screen) (Object) this)))
             .bounds(this.width - 112, 8, 104, 20)
             .build());

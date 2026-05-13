@@ -36,7 +36,7 @@ public final class SignalingServiceClient implements AutoCloseable {
     private final User user;
     private final String sessionId = UUID.randomUUID().toString();
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(task -> {
-        Thread thread = new Thread(task, "OfficialP2P-Signaling");
+        Thread thread = new Thread(task, "FriendLink-Signaling");
         thread.setDaemon(true);
         return thread;
     });
@@ -61,7 +61,7 @@ public final class SignalingServiceClient implements AutoCloseable {
         if (existingConnect != null && !existingConnect.isCompletedExceptionally()) {
             return existingConnect.thenApply(ignored -> null);
         }
-        OfficialP2PBackportClient.LOGGER.info("Official P2P signaling connect start");
+        OfficialP2PBackportClient.LOGGER.info("FriendLink signaling connect start");
         return CompletableFuture.supplyAsync(() -> {
             HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(20))
@@ -74,7 +74,7 @@ public final class SignalingServiceClient implements AutoCloseable {
                 .thenCompose(uri -> openWebSocket(client, rpc, uri, requestId));
             return websocketConnect;
         }, executor).thenCompose(future -> future).thenApply(rpc -> {
-            OfficialP2PBackportClient.LOGGER.info("Official P2P signaling connected");
+            OfficialP2PBackportClient.LOGGER.info("FriendLink signaling connected");
             return null;
         });
     }
@@ -106,13 +106,13 @@ public final class SignalingServiceClient implements AutoCloseable {
 
         return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
             .thenApply(response -> {
-                OfficialP2PBackportClient.LOGGER.info("Official P2P signaling configuration HTTP {}", response.statusCode());
+                OfficialP2PBackportClient.LOGGER.info("FriendLink signaling configuration HTTP {}", response.statusCode());
                 if (response.statusCode() / 100 != 2) {
                     throw new IllegalStateException("Signaling configuration failed: HTTP " + response.statusCode());
                 }
                 JsonObject root = JsonParser.parseString(response.body()).getAsJsonObject();
                 String signalingUri = root.getAsJsonObject("result").get("signalingUri").getAsString();
-                OfficialP2PBackportClient.LOGGER.info("Official P2P signaling uri {}", signalingUri);
+                OfficialP2PBackportClient.LOGGER.info("FriendLink signaling uri {}", signalingUri);
                 return signalingUri + WS_CONNECTION_ENDPOINT;
             });
     }
@@ -124,7 +124,7 @@ public final class SignalingServiceClient implements AutoCloseable {
             .header("Request-Id", requestId)
             .buildAsync(URI.create(uri), rpc)
             .thenApply(webSocket -> {
-                OfficialP2PBackportClient.LOGGER.info("Official P2P signaling websocket opened");
+                OfficialP2PBackportClient.LOGGER.info("FriendLink signaling websocket opened");
                 schedulePing(rpc);
                 return rpc;
             });

@@ -10,6 +10,7 @@ import zz.officialp2p.friends.model.FriendsListResponse;
 import zz.officialp2p.friends.model.JoinInfoUpdate;
 import zz.officialp2p.friends.model.PresenceRequest;
 import zz.officialp2p.friends.model.PresenceResponse;
+import zz.officialp2p.i18n.P2PTexts;
 
 import java.io.IOException;
 import java.net.ProxySelector;
@@ -26,6 +27,7 @@ public final class OfficialFriendsClient {
     private static final URI FRIENDS_URI = URI.create("https://api.minecraftservices.com/friends");
     private static final URI PRESENCE_URI = URI.create("https://api.minecraftservices.com/presence");
     private static final URI ATTRIBUTES_URI = URI.create("https://api.minecraftservices.com/player/attributes");
+    private static final String PROFILE_BY_NAME_URI = "https://api.minecraftservices.com/minecraft/profile/lookup/name/";
     private static final Duration TIMEOUT = Duration.ofSeconds(20);
     private static final Gson GSON = new GsonBuilder()
         .registerTypeAdapter(UUID.class, (com.google.gson.JsonDeserializer<UUID>) (json, type, context) -> {
@@ -106,6 +108,45 @@ public final class OfficialFriendsClient {
         return friendsCache;
     }
 
+    public FriendData addFriendByName(String name) {
+        String cleanedName = name == null ? "" : name.trim();
+        if (cleanedName.isBlank()) {
+            throw new OfficialFriendsException(P2PTexts.s("status.type_player_name"), null);
+        }
+        return putFriendAction(FriendActionRequest.addByName(cleanedName));
+    }
+
+    public FriendData acceptFriendRequest(UUID profileId) {
+        return putFriendAction(FriendActionRequest.addById(profileId));
+    }
+
+    public FriendData declineFriendRequest(UUID profileId) {
+        return putFriendAction(FriendActionRequest.removeById(profileId));
+    }
+
+    public FriendData revokeFriendRequest(UUID profileId) {
+        return putFriendAction(FriendActionRequest.removeById(profileId));
+    }
+
+    public ProfileLookup lookupProfileByName(String name) {
+        String cleanedName = name == null ? "" : name.trim();
+        if (cleanedName.isBlank()) {
+            throw new OfficialFriendsException(P2PTexts.s("status.type_player_name"), null);
+        }
+
+        URI uri = URI.create(PROFILE_BY_NAME_URI + cleanedName);
+        HttpResponse<String> response = send(authed(uri).GET().build());
+        ensureSuccess(response, "profile lookup");
+        JsonObject json = gson.fromJson(response.body(), JsonObject.class);
+        if (json == null || !json.has("id")) {
+            throw new OfficialFriendsException(P2PTexts.s("error.unknown_profile"), null);
+        }
+        String resolvedName = json.has("name") && !json.get("name").isJsonNull()
+            ? json.get("name").getAsString()
+            : cleanedName;
+        return new ProfileLookup(parseUuid(json.get("id").getAsString()), resolvedName);
+    }
+
     public PresenceResponse presence(String status, JoinInfoUpdate joinInfoUpdate) {
         String json = gson.toJson(new PresenceRequest(status, joinInfoUpdate));
         HttpRequest.Builder builder = authed(PRESENCE_URI)
@@ -148,7 +189,7 @@ public final class OfficialFriendsClient {
             .timeout(TIMEOUT)
             .header("Authorization", "Bearer " + accessToken)
             .header("Accept", "application/json")
-            .header("User-Agent", "Minecraft OfficialP2PBackport/0.1");
+            .header("User-Agent", "Minecraft FriendLink/0.1");
     }
 
     private HttpResponse<String> send(HttpRequest request) {
@@ -181,5 +222,8 @@ public final class OfficialFriendsClient {
                 + "-" + cleaned.substring(20);
         }
         return UUID.fromString(cleaned);
+    }
+
+    public record ProfileLookup(UUID profileId, String name) {
     }
 }

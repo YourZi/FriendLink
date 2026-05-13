@@ -28,23 +28,22 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 public final class OfficialP2PBackportClient implements ClientModInitializer {
-    public static final String MOD_ID = "official_p2p_backport";
-    public static final String BUILD_MARKER = "r20-zh-adaptive-ui";
+    public static final String MOD_ID = "friendlink";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     private static ExperimentalP2PSessionManager experimentalP2P;
 
     @Override
     public void onInitializeClient() {
-        LOGGER.info("Official P2P 26.1 backport scaffold loaded");
+        LOGGER.info("FriendLink loaded");
         registerCommands();
     }
 
     private static void registerCommands() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(
-            ClientCommands.literal("officialp2p")
+            ClientCommands.literal("friendlink")
                 .then(ClientCommands.literal("id").executes(context -> {
                     Minecraft minecraft = Minecraft.getInstance();
-                    context.getSource().sendFeedback(Component.literal("[OfficialP2P " + BUILD_MARKER + "] player="
+                    context.getSource().sendFeedback(Component.literal("[FriendLink] player="
                         + minecraft.getUser().getName() + " uuid=" + minecraft.getUser().getProfileId()));
                     return 1;
                 }))
@@ -58,7 +57,7 @@ public final class OfficialP2PBackportClient implements ClientModInitializer {
                 .then(ClientCommands.literal("friends").executes(context -> {
                     Minecraft minecraft = Minecraft.getInstance();
                     User user = minecraft.getUser();
-                    context.getSource().sendFeedback(Component.literal("[OfficialP2P] fetching official friends..."));
+                    context.getSource().sendFeedback(Component.literal("[FriendLink] fetching official friends..."));
 
                     CompletableFuture
                         .supplyAsync(() -> new OfficialFriendsClient(user.getAccessToken(), ProxySelector.getDefault()).getFriendData())
@@ -68,8 +67,8 @@ public final class OfficialP2PBackportClient implements ClientModInitializer {
                                 String message = cause instanceof OfficialFriendsException friendsException
                                     ? friendsException.userMessage()
                                     : cause.getClass().getSimpleName() + ": " + cause.getMessage();
-                                context.getSource().sendFeedback(Component.literal("[OfficialP2P] friends failed: " + message));
-                                LOGGER.warn("Official friends request failed", cause);
+                                context.getSource().sendFeedback(Component.literal("[FriendLink] friends failed: " + message));
+                                LOGGER.warn("FriendLink friends request failed", cause);
                                 return;
                             }
 
@@ -80,7 +79,7 @@ public final class OfficialP2PBackportClient implements ClientModInitializer {
                 .then(ClientCommands.literal("presence").executes(context -> {
                     Minecraft minecraft = Minecraft.getInstance();
                     String status = HostPresencePublisher.currentStatus(minecraft);
-                    context.getSource().sendFeedback(Component.literal("[OfficialP2P] posting " + status + " presence..."));
+                    context.getSource().sendFeedback(Component.literal("[FriendLink] posting " + status + " presence..."));
 
                     CompletableFuture
                         .supplyAsync(() -> new OfficialFriendsClient(minecraft.getUser().getAccessToken(), ProxySelector.getDefault())
@@ -91,7 +90,7 @@ public final class OfficialP2PBackportClient implements ClientModInitializer {
                                 String message = cause instanceof OfficialFriendsException friendsException
                                     ? friendsException.userMessage()
                                     : cause.getClass().getSimpleName() + ": " + cause.getMessage();
-                                context.getSource().sendFeedback(Component.literal("[OfficialP2P] presence failed: " + message));
+                                context.getSource().sendFeedback(Component.literal("[FriendLink] presence failed: " + message));
                                 LOGGER.warn("Official presence request failed", cause);
                                 return;
                             }
@@ -103,7 +102,7 @@ public final class OfficialP2PBackportClient implements ClientModInitializer {
                 .then(ClientCommands.literal("signaling").executes(context -> {
                     Minecraft minecraft = Minecraft.getInstance();
                     User user = minecraft.getUser();
-                    context.getSource().sendFeedback(Component.literal("[OfficialP2P] connecting official signaling..."));
+                    context.getSource().sendFeedback(Component.literal("[FriendLink] connecting official signaling..."));
 
                     SignalingServiceClient signaling = new SignalingServiceClient(user);
                     signaling.connect()
@@ -113,13 +112,13 @@ public final class OfficialP2PBackportClient implements ClientModInitializer {
                             minecraft.execute(() -> {
                                 if (throwable != null) {
                                     Throwable cause = throwable.getCause() == null ? throwable : throwable.getCause();
-                                    context.getSource().sendFeedback(Component.literal("[OfficialP2P] signaling failed: "
+                                    context.getSource().sendFeedback(Component.literal("[FriendLink] signaling failed: "
                                         + cause.getClass().getSimpleName() + ": " + cause.getMessage()));
                                     LOGGER.warn("Official signaling request failed", cause);
                                     return;
                                 }
 
-                                context.getSource().sendFeedback(Component.literal("[OfficialP2P] signaling OK, TURN urls="
+                                context.getSource().sendFeedback(Component.literal("[FriendLink] signaling OK, TURN urls="
                                     + iceServer.urls.size()));
                                 iceServer.urls.stream()
                                     .limit(4)
@@ -131,10 +130,10 @@ public final class OfficialP2PBackportClient implements ClientModInitializer {
                 .then(ClientCommands.literal("listen").executes(context -> {
                     Minecraft minecraft = Minecraft.getInstance();
                     if (minecraft.getSingleplayerServer() == null) {
-                        context.getSource().sendFeedback(Component.literal("[OfficialP2P] listen needs a single-player world first"));
+                        context.getSource().sendFeedback(Component.literal("[FriendLink] listen needs a single-player world first"));
                         return 0;
                     }
-                    context.getSource().sendFeedback(Component.literal("[OfficialP2P] connecting signaling listener..."));
+                    context.getSource().sendFeedback(Component.literal("[FriendLink] connecting signaling listener..."));
                     ExperimentalP2PSessionManager manager = experimentalManager(minecraft);
                     manager.connectSignaling()
                         .thenCompose(ignored -> manager.publishHostedPresence())
@@ -142,14 +141,14 @@ public final class OfficialP2PBackportClient implements ClientModInitializer {
                         .whenComplete((presence, throwable) -> minecraft.execute(() -> {
                             if (throwable != null) {
                                 Throwable cause = throwable.getCause() == null ? throwable : throwable.getCause();
-                                context.getSource().sendFeedback(Component.literal("[OfficialP2P] listen failed: "
+                                context.getSource().sendFeedback(Component.literal("[FriendLink] listen failed: "
                                     + cause.getClass().getSimpleName() + ": " + cause.getMessage()));
                                 LOGGER.warn("P2P listener failed", cause);
                                 return;
                             }
-                            context.getSource().sendFeedback(Component.literal("[OfficialP2P] listening for P2P offers; hosted presence posted; visible entries="
+                            context.getSource().sendFeedback(Component.literal("[FriendLink] listening for P2P offers; hosted presence posted; visible entries="
                                 + presence.presence().size()));
-                            context.getSource().sendFeedback(Component.literal("[OfficialP2P " + BUILD_MARKER + "] HOST "
+                            context.getSource().sendFeedback(Component.literal("[FriendLink] HOST "
                                 + minecraft.getUser().getName() + " UUID=" + minecraft.getUser().getProfileId()));
                         }));
                     return 1;
@@ -158,11 +157,11 @@ public final class OfficialP2PBackportClient implements ClientModInitializer {
                     .then(ClientCommands.argument("peerPmid", StringArgumentType.word()).executes(context -> {
                         Minecraft minecraft = Minecraft.getInstance();
                         UUID peerPmid = Uuids.parseFlexible(StringArgumentType.getString(context, "peerPmid"));
-                        context.getSource().sendFeedback(Component.literal("[OfficialP2P " + BUILD_MARKER + "] resolving host id " + peerPmid));
+                        context.getSource().sendFeedback(Component.literal("[FriendLink] resolving host id " + peerPmid));
                         ExperimentalP2PSessionManager manager = experimentalManager(minecraft);
                         PeerTargetResolver.resolve(minecraft, peerPmid)
                             .thenCompose(resolved -> {
-                                minecraft.execute(() -> context.getSource().sendFeedback(Component.literal("[OfficialP2P " + BUILD_MARKER + "] "
+                                minecraft.execute(() -> context.getSource().sendFeedback(Component.literal("[FriendLink] "
                                     + resolved.message())));
                                 return manager.connectSignaling()
                                     .thenCompose(ignored -> manager.startOffer(resolved.targetPlayerId()));
@@ -171,12 +170,12 @@ public final class OfficialP2PBackportClient implements ClientModInitializer {
                             .whenComplete((ignored, throwable) -> minecraft.execute(() -> {
                                 if (throwable != null) {
                                     Throwable cause = throwable.getCause() == null ? throwable : throwable.getCause();
-                                    context.getSource().sendFeedback(Component.literal("[OfficialP2P " + BUILD_MARKER + "] connect failed: "
+                                    context.getSource().sendFeedback(Component.literal("[FriendLink] connect failed: "
                                         + shortError(cause)));
                                     LOGGER.warn("P2P connect failed", cause);
                                     return;
                                 }
-                                context.getSource().sendFeedback(Component.literal("[OfficialP2P " + BUILD_MARKER + "] WebRTC channel open; joining host world"));
+                                context.getSource().sendFeedback(Component.literal("[FriendLink] WebRTC channel open; joining host world"));
                             }));
                         return 1;
                     })))
@@ -191,7 +190,7 @@ public final class OfficialP2PBackportClient implements ClientModInitializer {
     }
 
     private static void sendFriendData(java.util.function.Consumer<Component> sink, FriendData friendData) {
-        sink.accept(Component.literal("[OfficialP2P] friends=" + friendData.friends().size()
+        sink.accept(Component.literal("[FriendLink] friends=" + friendData.friends().size()
             + " incoming=" + friendData.incomingRequests().size()
             + " outgoing=" + friendData.outgoingRequests().size()));
         friendData.friends().stream()
@@ -200,7 +199,7 @@ public final class OfficialP2PBackportClient implements ClientModInitializer {
     }
 
     private static void sendPresenceData(java.util.function.Consumer<Component> sink, PresenceResponse presence) {
-        sink.accept(Component.literal("[OfficialP2P] presence entries=" + presence.presence().size()));
+        sink.accept(Component.literal("[FriendLink] presence entries=" + presence.presence().size()));
         presence.presence().stream()
             .limit(10)
             .forEach(entry -> sink.accept(Component.literal(" - " + entry.profileId()
@@ -212,7 +211,7 @@ public final class OfficialP2PBackportClient implements ClientModInitializer {
     private static String shortError(Throwable cause) {
         String message = cause.getMessage();
         if (message != null && message.contains("Player not registered with the service")) {
-            return "target player is not registered with signaling. Keep host on Listen, update both jars, and use the pmid from /officialp2p presence.";
+            return "target player is not registered with signaling. Keep host on Listen, update both jars, and use the pmid from /friendlink presence.";
         }
         return cause.getClass().getSimpleName() + ": " + message;
     }

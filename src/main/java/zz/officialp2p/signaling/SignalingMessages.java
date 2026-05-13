@@ -19,9 +19,10 @@ public final class SignalingMessages {
         return message("JOIN_REJECTED", sessionId);
     }
 
-    public static JsonObject offer(String sessionId, String sdp) {
+    public static JsonObject offer(String sessionId, String sdp, String playerName) {
         JsonObject message = message("OFFER", sessionId);
         message.addProperty("sdp", sdp);
+        message.addProperty("playerName", playerName);
         return message;
     }
 

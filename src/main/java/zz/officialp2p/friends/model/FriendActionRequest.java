@@ -2,7 +2,7 @@ package zz.officialp2p.friends.model;
 
 import java.util.UUID;
 
-public record FriendActionRequest(String name, UUID profileId, UpdateType type) {
+public record FriendActionRequest(String name, UUID profileId, UpdateType updateType) {
     public static FriendActionRequest addByName(String name) {
         return new FriendActionRequest(name, null, UpdateType.ADD);
     }

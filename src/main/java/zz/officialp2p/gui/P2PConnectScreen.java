@@ -26,6 +26,11 @@ public final class P2PConnectScreen extends Screen {
     private static final int PANEL_HEIGHT = 330;
     private static final int ROW_COUNT = 5;
     private static final int ROW_HEIGHT = 26;
+    private static final long SUCCESS_REFRESH_COOLDOWN_MS = 20_000L;
+    private static final long FAILURE_REFRESH_COOLDOWN_MS = 120_000L;
+    private static FriendData cachedFriendData = FriendData.empty();
+    private static Component cachedStatus = Component.literal("Ready. " + OfficialP2PBackportClient.BUILD_MARKER);
+    private static long nextFriendsFetchAt;
 
     private final Screen parent;
     private final List<Button> rowButtons = new ArrayList<>();
@@ -85,7 +90,7 @@ public final class P2PConnectScreen extends Screen {
         this.connectButton = this.addRenderableWidget(Button.builder(Component.literal("Connect"), button -> connect())
             .bounds(left + 118, bottom, 92, 20)
             .build());
-        this.refreshButton = this.addRenderableWidget(Button.builder(Component.literal("Refresh"), button -> refreshFriends())
+        this.refreshButton = this.addRenderableWidget(Button.builder(Component.literal("Refresh"), button -> refreshFriends(true))
             .bounds(left + 216, bottom, 78, 20)
             .build());
         this.copyIdButton = this.addRenderableWidget(Button.builder(Component.literal("My ID"), button -> fillMyId())
@@ -96,8 +101,10 @@ public final class P2PConnectScreen extends Screen {
             .bounds(left + PANEL_WIDTH - 62, top + PANEL_HEIGHT + 8, 54, 20)
             .build());
 
+        this.friendData = cachedFriendData;
+        this.status = cachedStatus;
         updateWidgets();
-        refreshFriends();
+        refreshFriends(false);
     }
 
     @Override
@@ -127,11 +134,21 @@ public final class P2PConnectScreen extends Screen {
         updateWidgets();
     }
 
-    private void refreshFriends() {
+    private void refreshFriends(boolean manual) {
         Minecraft client = Minecraft.getInstance();
         User user = client.getUser();
+        long now = System.currentTimeMillis();
+        if (now < nextFriendsFetchAt) {
+            long seconds = Math.max(1L, (nextFriendsFetchAt - now + 999L) / 1000L);
+            this.status = Component.literal((manual ? "Refresh" : "Friends auto refresh") + " cooling down: " + seconds + "s");
+            cachedStatus = this.status;
+            updateWidgets();
+            return;
+        }
+
         this.loadingFriends = true;
         this.status = Component.literal("Fetching official friends...");
+        cachedStatus = this.status;
         updateWidgets();
 
         CompletableFuture
@@ -141,12 +158,17 @@ public final class P2PConnectScreen extends Screen {
                 if (throwable != null) {
                     Throwable cause = throwable.getCause() == null ? throwable : throwable.getCause();
                     this.status = Component.literal("Friends failed: " + userMessage(cause));
+                    cachedStatus = this.status;
+                    nextFriendsFetchAt = System.currentTimeMillis() + FAILURE_REFRESH_COOLDOWN_MS;
                     OfficialP2PBackportClient.LOGGER.warn("Official friends UI refresh failed", cause);
                     updateWidgets();
                     return;
                 }
                 this.friendData = data == null ? FriendData.empty() : data;
+                cachedFriendData = this.friendData;
                 this.status = Component.literal("Friends loaded.");
+                cachedStatus = this.status;
+                nextFriendsFetchAt = System.currentTimeMillis() + SUCCESS_REFRESH_COOLDOWN_MS;
                 updateWidgets();
             }));
     }
@@ -157,6 +179,14 @@ public final class P2PConnectScreen extends Screen {
         if (raw.isBlank()) {
             this.status = Component.literal("Enter a profile name first.");
             return;
+        }
+        try {
+            this.selectedPeer = Uuids.parseFlexible(raw);
+            this.selectedName = "";
+            this.status = Component.literal("UUID selected. Click Connect to join.");
+            updateWidgets();
+            return;
+        } catch (IllegalArgumentException ignored) {
         }
 
         this.addButton.active = false;
@@ -181,11 +211,7 @@ public final class P2PConnectScreen extends Screen {
     }
 
     private FriendActionRequest friendAction(String raw) {
-        try {
-            return FriendActionRequest.addById(Uuids.parseFlexible(raw));
-        } catch (IllegalArgumentException ignored) {
-            return FriendActionRequest.addByName(raw);
-        }
+        return FriendActionRequest.addByName(raw);
     }
 
     private void listen() {
@@ -253,7 +279,7 @@ public final class P2PConnectScreen extends Screen {
         this.friendsTab.active = this.activeTab != Tab.FRIENDS;
         this.requestsTab.active = this.activeTab != Tab.REQUESTS;
         this.requestsTab.setMessage(requestsTitle());
-        this.refreshButton.active = !this.loadingFriends;
+        this.refreshButton.active = !this.loadingFriends && System.currentTimeMillis() >= nextFriendsFetchAt;
         this.addButton.active = !this.loadingFriends;
 
         List<FriendDto> rows = visibleRows();
@@ -294,7 +320,8 @@ public final class P2PConnectScreen extends Screen {
     private void drawHeader(GuiGraphicsExtractor graphics, int left, int top) {
         graphics.fill(left + 20, top + 14, left + PANEL_WIDTH - 20, top + 64, 0xFF2A2A2A);
         graphics.text(this.font, "My profile name: " + this.minecraft.getUser().getName(), left + 30, top + 46, 0xFFCFCFCF);
-        graphics.text(this.font, this.status, left + 30, top + 70, 0xFFFFFF55);
+        int statusColor = this.status.getString().contains("failed") ? 0xFFFFFF55 : 0xFFCFCFCF;
+        graphics.text(this.font, fit(this.status.getString(), PANEL_WIDTH - 60), left + 30, top + 70, statusColor);
         graphics.fill(left + 8, top + 96, left + PANEL_WIDTH - 8, top + 97, 0xFF1C1C1C);
     }
 

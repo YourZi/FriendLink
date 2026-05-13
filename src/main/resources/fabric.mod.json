@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "official_p2p_backport",
+  "version": "${version}",
+  "name": "Official P2P 26.1 Backport",
+  "description": "Experimental backport scaffold for Mojang official friends and P2P transport on Minecraft 26.1.2.",
+  "authors": [
+    "ZzaiQWQ"
+  ],
+  "license": "GPL-3.0-only",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "zz.officialp2p.OfficialP2PBackportClient"
+    ]
+  },
+  "mixins": [
+    "official_p2p_backport.mixins.json"
+  ],
+  "accessWidener": "official_p2p_backport.accesswidener",
+  "depends": {
+    "fabricloader": ">=0.18.4",
+    "minecraft": "26.1.2",
+    "fabric-api": "*"
+  }
+}

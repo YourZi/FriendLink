@@ -1,0 +1,15 @@
+.gradle/
+.gradle-user-home/
+.mc26_2/
+build/
+out/
+.idea/
+*.iml
+
+*.log
+*.tmp
+*.bak
+
+run/
+logs/
+crash-reports/

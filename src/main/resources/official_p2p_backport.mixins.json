@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "zz.officialp2p.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "JoinMultiplayerScreenMixin",
+    "PauseScreenMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

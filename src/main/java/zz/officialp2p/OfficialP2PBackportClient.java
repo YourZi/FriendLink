@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 public final class OfficialP2PBackportClient implements ClientModInitializer {
     public static final String MOD_ID = "official_p2p_backport";
-    public static final String BUILD_MARKER = "r19-friends-ui-guard";
+    public static final String BUILD_MARKER = "r20-zh-adaptive-ui";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     private static ExperimentalP2PSessionManager experimentalP2P;
 

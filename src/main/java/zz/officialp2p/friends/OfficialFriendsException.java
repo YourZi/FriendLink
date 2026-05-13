@@ -22,11 +22,11 @@ public final class OfficialFriendsException extends RuntimeException {
 
     public String userMessage() {
         return switch (statusCode) {
-            case 400 -> operation + " failed: name or profile does not exist";
-            case 401 -> operation + " failed: login token was rejected";
-            case 403 -> operation + " failed: account/session is forbidden by official friends service";
-            case 429 -> operation + " failed: official friends service rate limit";
-            case 500, 502, 503, 504 -> operation + " failed: official friends service is unavailable";
+            case 400 -> "玩家名或档案不存在";
+            case 401 -> "登录令牌被拒绝，请重新登录";
+            case 403 -> "账号或隐私设置不允许使用官方好友服务";
+            case 429 -> "官方好友服务请求过快，请等一会再刷新";
+            case 500, 502, 503, 504 -> "官方好友服务暂时不可用";
             default -> getMessage();
         };
     }

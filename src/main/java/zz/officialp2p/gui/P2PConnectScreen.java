@@ -22,14 +22,14 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public final class P2PConnectScreen extends Screen {
-    private static final int PANEL_WIDTH = 390;
-    private static final int PANEL_HEIGHT = 330;
+    private static final int MAX_PANEL_WIDTH = 340;
+    private static final int MAX_PANEL_HEIGHT = 286;
     private static final int ROW_COUNT = 5;
-    private static final int ROW_HEIGHT = 26;
+    private static final int ROW_HEIGHT = 24;
     private static final long SUCCESS_REFRESH_COOLDOWN_MS = 20_000L;
     private static final long FAILURE_REFRESH_COOLDOWN_MS = 120_000L;
     private static FriendData cachedFriendData = FriendData.empty();
-    private static Component cachedStatus = Component.literal("Ready. " + OfficialP2PBackportClient.BUILD_MARKER);
+    private static Component cachedStatus = Component.literal("就绪 " + OfficialP2PBackportClient.BUILD_MARKER);
     private static long nextFriendsFetchAt;
 
     private final Screen parent;
@@ -46,11 +46,11 @@ public final class P2PConnectScreen extends Screen {
     private Tab activeTab = Tab.FRIENDS;
     private UUID selectedPeer;
     private String selectedName = "";
-    private Component status = Component.literal("Ready. " + OfficialP2PBackportClient.BUILD_MARKER);
+    private Component status = Component.literal("就绪 " + OfficialP2PBackportClient.BUILD_MARKER);
     private boolean loadingFriends;
 
     public P2PConnectScreen(Screen parent) {
-        super(Component.literal("Friends"));
+        super(Component.literal("好友"));
         this.parent = parent;
     }
 
@@ -58,47 +58,50 @@ public final class P2PConnectScreen extends Screen {
     protected void init() {
         int left = panelLeft();
         int top = panelTop();
+        int panelWidth = panelWidth();
+        int panelHeight = panelHeight();
+        int tabWidth = (panelWidth - 28) / 2;
 
-        this.friendsTab = this.addRenderableWidget(Button.builder(Component.literal("Friends"), button -> setTab(Tab.FRIENDS))
-            .bounds(left + 16, top - 38, (PANEL_WIDTH - 32) / 2, 36)
+        this.friendsTab = this.addRenderableWidget(Button.builder(Component.literal("好友"), button -> setTab(Tab.FRIENDS))
+            .bounds(left + 14, top - 32, tabWidth, 30)
             .build());
         this.requestsTab = this.addRenderableWidget(Button.builder(requestsTitle(), button -> setTab(Tab.REQUESTS))
-            .bounds(left + 16 + (PANEL_WIDTH - 32) / 2, top - 38, (PANEL_WIDTH - 32) / 2, 36)
+            .bounds(left + 14 + tabWidth, top - 32, tabWidth, 30)
             .build());
 
-        this.profileBox = new EditBox(this.font, left + 30, top + 20, PANEL_WIDTH - 88, 20, Component.literal("Enter Profile Name"));
+        this.profileBox = new EditBox(this.font, left + 24, top + 18, panelWidth - 78, 20, Component.literal("输入玩家名或房主ID"));
         this.profileBox.setMaxLength(64);
-        this.profileBox.setHint(Component.literal("Enter Profile Name"));
+        this.profileBox.setHint(Component.literal("输入玩家名或房主ID"));
         this.addRenderableWidget(this.profileBox);
 
         this.addButton = this.addRenderableWidget(Button.builder(Component.literal("+"), button -> addFriend())
-            .bounds(left + PANEL_WIDTH - 52, top + 20, 24, 20)
+            .bounds(left + panelWidth - 46, top + 18, 22, 20)
             .build());
 
         for (int index = 0; index < ROW_COUNT; index++) {
             int row = index;
             Button button = this.addRenderableWidget(Button.builder(Component.empty(), ignored -> selectVisibleRow(row))
-                .bounds(left + 28, rowsTop() + row * ROW_HEIGHT, PANEL_WIDTH - 56, 22)
+                .bounds(left + 24, rowsTop() + row * ROW_HEIGHT, panelWidth - 48, 20)
                 .build());
             this.rowButtons.add(button);
         }
 
-        int bottom = top + PANEL_HEIGHT - 34;
-        this.listenButton = this.addRenderableWidget(Button.builder(Component.literal("Listen"), button -> listen())
-            .bounds(left + 28, bottom, 84, 20)
+        int bottom = top + panelHeight - 30;
+        this.listenButton = this.addRenderableWidget(Button.builder(Component.literal("开房"), button -> listen())
+            .bounds(left + 24, bottom, 64, 20)
             .build());
-        this.connectButton = this.addRenderableWidget(Button.builder(Component.literal("Connect"), button -> connect())
-            .bounds(left + 118, bottom, 92, 20)
+        this.connectButton = this.addRenderableWidget(Button.builder(Component.literal("加入"), button -> connect())
+            .bounds(left + 94, bottom, 64, 20)
             .build());
-        this.refreshButton = this.addRenderableWidget(Button.builder(Component.literal("Refresh"), button -> refreshFriends(true))
-            .bounds(left + 216, bottom, 78, 20)
+        this.refreshButton = this.addRenderableWidget(Button.builder(Component.literal("刷新"), button -> refreshFriends(true))
+            .bounds(left + 164, bottom, 64, 20)
             .build());
-        this.copyIdButton = this.addRenderableWidget(Button.builder(Component.literal("My ID"), button -> fillMyId())
-            .bounds(left + 300, bottom, 62, 20)
+        this.copyIdButton = this.addRenderableWidget(Button.builder(Component.literal("我的ID"), button -> fillMyId())
+            .bounds(left + 234, bottom, 70, 20)
             .build());
 
-        this.addRenderableWidget(Button.builder(Component.literal("Back"), button -> this.minecraft.setScreen(this.parent))
-            .bounds(left + PANEL_WIDTH - 62, top + PANEL_HEIGHT + 8, 54, 20)
+        this.addRenderableWidget(Button.builder(Component.literal("返回"), button -> this.minecraft.setScreen(this.parent))
+            .bounds(left + panelWidth - 58, top + panelHeight + 6, 50, 20)
             .build());
 
         this.friendData = cachedFriendData;
@@ -140,14 +143,14 @@ public final class P2PConnectScreen extends Screen {
         long now = System.currentTimeMillis();
         if (now < nextFriendsFetchAt) {
             long seconds = Math.max(1L, (nextFriendsFetchAt - now + 999L) / 1000L);
-            this.status = Component.literal((manual ? "Refresh" : "Friends auto refresh") + " cooling down: " + seconds + "s");
+            this.status = Component.literal((manual ? "刷新" : "自动刷新") + "冷却中：" + seconds + "秒");
             cachedStatus = this.status;
             updateWidgets();
             return;
         }
 
         this.loadingFriends = true;
-        this.status = Component.literal("Fetching official friends...");
+        this.status = Component.literal("正在获取官方好友...");
         cachedStatus = this.status;
         updateWidgets();
 
@@ -157,7 +160,7 @@ public final class P2PConnectScreen extends Screen {
                 this.loadingFriends = false;
                 if (throwable != null) {
                     Throwable cause = throwable.getCause() == null ? throwable : throwable.getCause();
-                    this.status = Component.literal("Friends failed: " + userMessage(cause));
+                    this.status = Component.literal("好友获取失败：" + userMessage(cause));
                     cachedStatus = this.status;
                     nextFriendsFetchAt = System.currentTimeMillis() + FAILURE_REFRESH_COOLDOWN_MS;
                     OfficialP2PBackportClient.LOGGER.warn("Official friends UI refresh failed", cause);
@@ -166,7 +169,7 @@ public final class P2PConnectScreen extends Screen {
                 }
                 this.friendData = data == null ? FriendData.empty() : data;
                 cachedFriendData = this.friendData;
-                this.status = Component.literal("Friends loaded.");
+                this.status = Component.literal("好友已加载");
                 cachedStatus = this.status;
                 nextFriendsFetchAt = System.currentTimeMillis() + SUCCESS_REFRESH_COOLDOWN_MS;
                 updateWidgets();
@@ -177,20 +180,20 @@ public final class P2PConnectScreen extends Screen {
         Minecraft client = Minecraft.getInstance();
         String raw = this.profileBox.getValue().trim();
         if (raw.isBlank()) {
-            this.status = Component.literal("Enter a profile name first.");
+            this.status = Component.literal("先输入玩家名");
             return;
         }
         try {
             this.selectedPeer = Uuids.parseFlexible(raw);
             this.selectedName = "";
-            this.status = Component.literal("UUID selected. Click Connect to join.");
+            this.status = Component.literal("已选择房主ID，点“加入”进入");
             updateWidgets();
             return;
         } catch (IllegalArgumentException ignored) {
         }
 
         this.addButton.active = false;
-        this.status = Component.literal("Sending friend request...");
+        this.status = Component.literal("正在发送好友请求...");
         CompletableFuture
             .supplyAsync(() -> {
                 OfficialFriendsClient friends = new OfficialFriendsClient(client.getUser().getAccessToken(), ProxySelector.getDefault());
@@ -200,12 +203,12 @@ public final class P2PConnectScreen extends Screen {
                 this.addButton.active = true;
                 if (throwable != null) {
                     Throwable cause = throwable.getCause() == null ? throwable : throwable.getCause();
-                    this.status = Component.literal("Friend action failed: " + userMessage(cause));
+                    this.status = Component.literal("好友操作失败：" + userMessage(cause));
                     OfficialP2PBackportClient.LOGGER.warn("Official friend action failed", cause);
                     return;
                 }
                 this.friendData = data == null ? FriendData.empty() : data;
-                this.status = Component.literal("Friend request updated.");
+                this.status = Component.literal("好友请求已更新");
                 updateWidgets();
             }));
     }
@@ -217,11 +220,11 @@ public final class P2PConnectScreen extends Screen {
     private void listen() {
         Minecraft client = Minecraft.getInstance();
         this.listenButton.active = false;
-        this.listenButton.setMessage(Component.literal("Listening..."));
+        this.listenButton.setMessage(Component.literal("开房中..."));
         P2PUiActions.listen(client, this::setStatus)
             .whenComplete((ignored, throwable) -> client.execute(() -> {
                 this.listenButton.active = true;
-                this.listenButton.setMessage(Component.literal("Listen"));
+                this.listenButton.setMessage(Component.literal("开房"));
             }));
     }
 
@@ -233,21 +236,21 @@ public final class P2PConnectScreen extends Screen {
             try {
                 peerPmid = Uuids.parseFlexible(rawPeer);
             } catch (IllegalArgumentException exception) {
-                P2PUiActions.status(client, this::setStatus, "Select a friend or enter a valid host UUID.");
+                P2PUiActions.status(client, this::setStatus, "请选择好友，或输入有效的房主ID。");
                 return;
             }
         }
         if (peerPmid == null) {
-            P2PUiActions.status(client, this::setStatus, "Select a friend or enter the host UUID.");
+            P2PUiActions.status(client, this::setStatus, "请选择好友，或输入房主ID。");
             return;
         }
 
         this.connectButton.active = false;
-        this.connectButton.setMessage(Component.literal("Connecting..."));
+        this.connectButton.setMessage(Component.literal("连接中..."));
         P2PUiActions.connect(client, peerPmid, this::setStatus)
             .whenComplete((ignored, throwable) -> client.execute(() -> {
                 this.connectButton.active = true;
-                this.connectButton.setMessage(Component.literal("Connect"));
+                this.connectButton.setMessage(Component.literal("加入"));
             }));
     }
 
@@ -255,7 +258,7 @@ public final class P2PConnectScreen extends Screen {
         this.profileBox.setValue(this.minecraft.getUser().getProfileId().toString());
         this.selectedPeer = null;
         this.selectedName = "";
-        this.status = Component.literal("Filled your profile UUID.");
+        this.status = Component.literal("已填入你的ID");
         updateWidgets();
     }
 
@@ -268,7 +271,7 @@ public final class P2PConnectScreen extends Screen {
         this.selectedPeer = friend.profileId();
         this.selectedName = friend.name() == null ? "" : friend.name();
         this.profileBox.setValue(friend.profileId().toString());
-        this.status = Component.literal("Selected " + displayName(friend) + ".");
+        this.status = Component.literal("已选择：" + displayName(friend));
         updateWidgets();
     }
 
@@ -301,34 +304,38 @@ public final class P2PConnectScreen extends Screen {
     }
 
     private void drawTabBackdrops(GuiGraphicsExtractor graphics, int left, int top) {
-        int tabWidth = (PANEL_WIDTH - 32) / 2;
-        int activeLeft = this.activeTab == Tab.FRIENDS ? left + 16 : left + 16 + tabWidth;
-        graphics.fill(left + 16, top - 38, left + 16 + tabWidth * 2, top - 2, 0xFF1B1B1B);
-        graphics.fill(activeLeft, top - 38, activeLeft + tabWidth, top - 2, 0xFF8E8E8E);
-        graphics.outline(left + 16, top - 38, tabWidth, 36, 0xFF000000);
-        graphics.outline(left + 16 + tabWidth, top - 38, tabWidth, 36, 0xFF000000);
+        int panelWidth = panelWidth();
+        int tabWidth = (panelWidth - 28) / 2;
+        int activeLeft = this.activeTab == Tab.FRIENDS ? left + 14 : left + 14 + tabWidth;
+        graphics.fill(left + 14, top - 32, left + 14 + tabWidth * 2, top - 2, 0xFF1B1B1B);
+        graphics.fill(activeLeft, top - 32, activeLeft + tabWidth, top - 2, 0xFF8E8E8E);
+        graphics.outline(left + 14, top - 32, tabWidth, 30, 0xFF000000);
+        graphics.outline(left + 14 + tabWidth, top - 32, tabWidth, 30, 0xFF000000);
     }
 
     private void drawPanel(GuiGraphicsExtractor graphics, int left, int top) {
-        graphics.fill(left - 4, top - 4, left + PANEL_WIDTH + 4, top + PANEL_HEIGHT + 4, 0xFFDDDDDD);
-        graphics.fill(left - 2, top - 2, left + PANEL_WIDTH + 2, top + PANEL_HEIGHT + 2, 0xFF000000);
-        graphics.fill(left, top, left + PANEL_WIDTH, top + PANEL_HEIGHT, 0xFF343434);
-        graphics.outline(left, top, PANEL_WIDTH, PANEL_HEIGHT, 0xFFFFFFFF);
-        graphics.outline(left + 4, top + 4, PANEL_WIDTH - 8, PANEL_HEIGHT - 8, 0xFF1C1C1C);
+        int panelWidth = panelWidth();
+        int panelHeight = panelHeight();
+        graphics.fill(left - 4, top - 4, left + panelWidth + 4, top + panelHeight + 4, 0xFFDDDDDD);
+        graphics.fill(left - 2, top - 2, left + panelWidth + 2, top + panelHeight + 2, 0xFF000000);
+        graphics.fill(left, top, left + panelWidth, top + panelHeight, 0xFF343434);
+        graphics.outline(left, top, panelWidth, panelHeight, 0xFFFFFFFF);
+        graphics.outline(left + 4, top + 4, panelWidth - 8, panelHeight - 8, 0xFF1C1C1C);
     }
 
     private void drawHeader(GuiGraphicsExtractor graphics, int left, int top) {
-        graphics.fill(left + 20, top + 14, left + PANEL_WIDTH - 20, top + 64, 0xFF2A2A2A);
-        graphics.text(this.font, "My profile name: " + this.minecraft.getUser().getName(), left + 30, top + 46, 0xFFCFCFCF);
-        int statusColor = this.status.getString().contains("failed") ? 0xFFFFFF55 : 0xFFCFCFCF;
-        graphics.text(this.font, fit(this.status.getString(), PANEL_WIDTH - 60), left + 30, top + 70, statusColor);
-        graphics.fill(left + 8, top + 96, left + PANEL_WIDTH - 8, top + 97, 0xFF1C1C1C);
+        int panelWidth = panelWidth();
+        graphics.fill(left + 18, top + 12, left + panelWidth - 18, top + 58, 0xFF2A2A2A);
+        graphics.text(this.font, "我的档案名：" + this.minecraft.getUser().getName(), left + 24, top + 42, 0xFFCFCFCF);
+        int statusColor = this.status.getString().contains("失败") ? 0xFFFFFF55 : 0xFFCFCFCF;
+        graphics.text(this.font, fit(this.status.getString(), panelWidth - 48), left + 24, top + 64, statusColor);
+        graphics.fill(left + 8, top + 88, left + panelWidth - 8, top + 89, 0xFF1C1C1C);
     }
 
     private void drawContent(GuiGraphicsExtractor graphics, int left, int top) {
         List<FriendDto> rows = visibleRows();
         if (this.loadingFriends) {
-            graphics.centeredText(this.font, Component.literal("Loading friends..."), left + PANEL_WIDTH / 2, top + 150, 0xFFFFFFFF);
+            graphics.centeredText(this.font, Component.literal("正在加载好友..."), left + panelWidth() / 2, top + 132, 0xFFFFFFFF);
             return;
         }
         if (!rows.isEmpty()) {
@@ -336,15 +343,14 @@ public final class P2PConnectScreen extends Screen {
             return;
         }
 
-        drawEmptyScene(graphics, left + PANEL_WIDTH / 2 - 76, top + 116);
+        int panelWidth = panelWidth();
+        drawEmptyScene(graphics, left + panelWidth / 2 - 76, top + 96);
         if (this.activeTab == Tab.FRIENDS) {
-            graphics.centeredText(this.font, Component.literal("Friends you add will be listed"), left + PANEL_WIDTH / 2, top + 218, 0xFFCFCFCF);
-            graphics.centeredText(this.font, Component.literal("here."), left + PANEL_WIDTH / 2, top + 232, 0xFFCFCFCF);
+            graphics.centeredText(this.font, Component.literal("添加后的好友会显示在这里"), left + panelWidth / 2, top + 196, 0xFFCFCFCF);
         } else {
-            graphics.centeredText(this.font, Component.literal("Friend requests will be listed"), left + PANEL_WIDTH / 2, top + 218, 0xFFCFCFCF);
-            graphics.centeredText(this.font, Component.literal("here."), left + PANEL_WIDTH / 2, top + 232, 0xFFCFCFCF);
+            graphics.centeredText(this.font, Component.literal("好友请求会显示在这里"), left + panelWidth / 2, top + 196, 0xFFCFCFCF);
         }
-        graphics.centeredText(this.font, Component.literal("Use Listen in a world, Connect from here."), left + PANEL_WIDTH / 2, top + 260, 0xFFB8B8B8);
+        graphics.centeredText(this.font, Component.literal("房主点开房，加入方点加入"), left + panelWidth / 2, top + 218, 0xFFB8B8B8);
     }
 
     private void drawRows(GuiGraphicsExtractor graphics, int left) {
@@ -352,13 +358,13 @@ public final class P2PConnectScreen extends Screen {
         for (int index = 0; index < ROW_COUNT; index++) {
             int rowY = y + index * ROW_HEIGHT;
             int color = index % 2 == 0 ? 0xFF3F3F3F : 0xFF383838;
-            graphics.fill(left + 24, rowY - 2, left + PANEL_WIDTH - 24, rowY + 23, color);
+            graphics.fill(left + 22, rowY - 2, left + panelWidth() - 22, rowY + 21, color);
         }
     }
 
     private void drawFooter(GuiGraphicsExtractor graphics, int left, int top) {
-        String selected = this.selectedPeer == null ? "No friend selected" : "Selected: " + this.selectedName;
-        graphics.text(this.font, fit(selected, PANEL_WIDTH - 60), left + 30, top + PANEL_HEIGHT - 56, 0xFFCFCFCF);
+        String selected = this.selectedPeer == null ? "未选择好友" : "已选择：" + this.selectedName;
+        graphics.text(this.font, fit(selected, panelWidth() - 48), left + 24, top + panelHeight() - 50, 0xFFCFCFCF);
     }
 
     private void drawEmptyScene(GuiGraphicsExtractor graphics, int x, int y) {
@@ -392,12 +398,12 @@ public final class P2PConnectScreen extends Screen {
 
     private Component requestsTitle() {
         int count = this.friendData.incomingRequests().size() + this.friendData.outgoingRequests().size();
-        return Component.literal("Requests (" + count + ")");
+        return Component.literal("请求 (" + count + ")");
     }
 
     private String displayName(FriendDto friend) {
         String name = friend.name();
-        return name == null || name.isBlank() ? "Unknown" : fit(name, 150);
+        return name == null || name.isBlank() ? "未知玩家" : fit(name, 130);
     }
 
     private String shortId(UUID uuid) {
@@ -420,15 +426,23 @@ public final class P2PConnectScreen extends Screen {
     }
 
     private int panelLeft() {
-        return (this.width - PANEL_WIDTH) / 2;
+        return (this.width - panelWidth()) / 2;
     }
 
     private int panelTop() {
-        return Math.max(58, (this.height - PANEL_HEIGHT) / 2 + 22);
+        return Math.max(56, (this.height - panelHeight()) / 2 + 12);
     }
 
     private int rowsTop() {
-        return panelTop() + 108;
+        return panelTop() + 98;
+    }
+
+    private int panelWidth() {
+        return Math.max(300, Math.min(MAX_PANEL_WIDTH, this.width - 92));
+    }
+
+    private int panelHeight() {
+        return Math.max(238, Math.min(MAX_PANEL_HEIGHT, this.height - 144));
     }
 
     private enum Tab {

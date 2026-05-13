@@ -18,11 +18,11 @@ public final class P2PUiActions {
 
     public static CompletableFuture<Void> listen(Minecraft client, Consumer<String> statusSink) {
         if (client.getSingleplayerServer() == null) {
-            status(client, statusSink, "Listen needs a single-player world first.");
+            status(client, statusSink, "开房需要先进入单人世界。");
             return CompletableFuture.completedFuture(null);
         }
 
-        status(client, statusSink, "Listen clicked. Connecting official signaling...");
+        status(client, statusSink, "正在连接官方信令...");
         ExperimentalP2PSessionManager manager = OfficialP2PBackportClient.experimentalManager(client);
         return manager.connectSignaling()
             .thenCompose(ignored -> manager.publishHostedPresence())
@@ -30,28 +30,27 @@ public final class P2PUiActions {
             .whenComplete((presence, throwable) -> client.execute(() -> {
                 if (throwable != null) {
                     Throwable cause = throwable.getCause() == null ? throwable : throwable.getCause();
-                    status(client, statusSink, "Listen failed: " + cause.getClass().getSimpleName() + ": " + cause.getMessage());
+                    status(client, statusSink, "开房失败：" + cause.getClass().getSimpleName() + ": " + cause.getMessage());
                     return;
                 }
-                status(client, statusSink, "Listening OK. Hosted presence posted. Visible entries="
+                status(client, statusSink, "开房成功，已发布在线状态。可见条目="
                     + presence.presence().size());
-                status(client, statusSink, "HOST " + client.getUser().getName() + " UUID="
+                status(client, statusSink, "房主 " + client.getUser().getName() + " ID="
                     + client.getUser().getProfileId());
             }))
             .thenApply(ignored -> null);
     }
 
     public static CompletableFuture<Void> connect(Minecraft client, UUID peerPmid, Consumer<String> statusSink) {
-        status(client, statusSink, "Connect clicked. Resolving host id " + peerPmid + "...");
+        status(client, statusSink, "正在解析房主ID：" + peerPmid);
         ExperimentalP2PSessionManager manager = OfficialP2PBackportClient.experimentalManager(client);
         return PeerTargetResolver.resolve(client, peerPmid)
             .thenCompose(resolved -> {
-                client.execute(() -> status(client, statusSink, resolved.message()));
+                client.execute(() -> status(client, statusSink, "目标已解析，正在准备连接。"));
                 return manager.connectSignaling()
                     .orTimeout(20, TimeUnit.SECONDS)
                     .thenCompose(ignored -> {
-                        client.execute(() -> status(client, statusSink, "Signaling connected. Sending WebRTC offer to "
-                            + resolved.targetPlayerId() + "..."));
+                        client.execute(() -> status(client, statusSink, "信令已连接，正在发送P2P连接请求。"));
                         return manager.startOffer(resolved.targetPlayerId());
                     });
             })
@@ -59,10 +58,10 @@ public final class P2PUiActions {
             .whenComplete((ignored, throwable) -> client.execute(() -> {
                 if (throwable != null) {
                     Throwable cause = throwable.getCause() == null ? throwable : throwable.getCause();
-                    status(client, statusSink, "Connect failed: " + shortError(cause));
+                    status(client, statusSink, "加入失败：" + shortError(cause));
                     return;
                 }
-                status(client, statusSink, "WebRTC channel open. Joining host world...");
+                status(client, statusSink, "P2P通道已打开，正在进入房主世界...");
             }));
     }
 
@@ -79,10 +78,10 @@ public final class P2PUiActions {
     private static String shortError(Throwable cause) {
         String message = cause.getMessage();
         if (message != null && message.contains("Player not registered with the service")) {
-            return "player not registered with signaling; use the host pmid, not the host UUID.";
+            return "对方没有注册到官方信令；让房主重新点开房，并使用好友列表里的房主ID。";
         }
         if (message != null && message.contains("Message to player could not be delivered")) {
-            return "message could not be delivered; host must click Listen again and stay in the world.";
+            return "消息发不到房主；房主需要重新点开房并留在世界里。";
         }
         return cause.getClass().getSimpleName() + ": " + message;
     }

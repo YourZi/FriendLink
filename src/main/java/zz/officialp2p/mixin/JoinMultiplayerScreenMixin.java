@@ -18,7 +18,7 @@ public abstract class JoinMultiplayerScreenMixin extends Screen {
 
     @Inject(method = "init", at = @At("TAIL"))
     private void officialP2P$addButton(CallbackInfo ci) {
-        this.addRenderableWidget(Button.builder(Component.literal("Official P2P"), button ->
+        this.addRenderableWidget(Button.builder(Component.literal("好友联机"), button ->
                 this.minecraft.setScreen(new P2PConnectScreen((Screen) (Object) this)))
             .bounds(this.width - 112, 8, 104, 20)
             .build());

@@ -19,20 +19,20 @@ public abstract class PauseScreenMixin extends Screen {
 
     @Inject(method = "init", at = @At("TAIL"))
     private void officialP2P$addButton(CallbackInfo ci) {
-        this.addRenderableWidget(Button.builder(Component.literal("P2P Listen"), button -> {
-                button.setMessage(Component.literal("Listening..."));
+        this.addRenderableWidget(Button.builder(Component.literal("P2P开房"), button -> {
+                button.setMessage(Component.literal("开房中..."));
                 button.active = false;
                 P2PUiActions.listen(this.minecraft, message -> {
-                    if (!message.startsWith("Listen clicked")) {
+                    if (!message.startsWith("正在连接")) {
                         button.active = true;
                     }
-                    button.setMessage(Component.literal(message.startsWith("Listening OK") ? "Listening OK" : "P2P Listen"));
+                    button.setMessage(Component.literal(message.startsWith("开房成功") ? "开房成功" : "P2P开房"));
                 });
             })
             .bounds(this.width - 224, 8, 104, 20)
             .build());
 
-        this.addRenderableWidget(Button.builder(Component.literal("Official P2P"), button ->
+        this.addRenderableWidget(Button.builder(Component.literal("好友联机"), button ->
                 this.minecraft.setScreen(new P2PConnectScreen((Screen) (Object) this)))
             .bounds(this.width - 112, 8, 104, 20)
             .build());

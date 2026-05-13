@@ -1,6 +1,6 @@
 {
   "required": true,
-  "package": "zz.officialp2p.mixin",
+  "package": "zz.friendlink.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
     "JoinMultiplayerScreenMixin",

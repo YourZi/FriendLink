@@ -11,7 +11,7 @@
   "environment": "client",
   "entrypoints": {
     "client": [
-      "zz.officialp2p.OfficialP2PBackportClient"
+      "zz.friendlink.FriendLinkClient"
     ]
   },
   "mixins": [

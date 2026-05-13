@@ -17,6 +17,7 @@ import net.minecraft.network.protocol.login.ServerboundHelloPacket;
 import zz.officialp2p.OfficialP2PBackportClient;
 import zz.officialp2p.net.BackportedConnectionFactory;
 import zz.officialp2p.net.BackportedServerConnectionAcceptor;
+import zz.officialp2p.i18n.P2PTexts;
 import zz.officialp2p.signaling.SignalingMessages;
 import zz.officialp2p.signaling.SignalingServiceClient;
 import zz.officialp2p.friends.model.PresenceResponse;
@@ -24,6 +25,7 @@ import zz.officialp2p.webrtc.RtcChannel;
 import zz.officialp2p.webrtc.RtcHandshake;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,8 +41,9 @@ public final class ExperimentalP2PSessionManager implements AutoCloseable {
     private final SignalingServiceClient signaling;
     private final PeerConnectionFactory peerConnectionFactory = new PeerConnectionFactory();
     private final Map<UUID, RtcHandshake> handshakes = new ConcurrentHashMap<>();
+    private final Set<UUID> connectingNotices = ConcurrentHashMap.newKeySet();
     private final ScheduledExecutorService presenceExecutor = Executors.newSingleThreadScheduledExecutor(task -> {
-        Thread thread = new Thread(task, "OfficialP2P-PresenceKeepAlive");
+        Thread thread = new Thread(task, "FriendLink-PresenceKeepAlive");
         thread.setDaemon(true);
         return thread;
     });
@@ -72,12 +75,7 @@ public final class ExperimentalP2PSessionManager implements AutoCloseable {
             String sessionId = UUID.randomUUID().toString();
             RtcHandshake handshake = createHandshake(peerPmid, sessionId, true, iceServer);
             return handshake.createOffer()
-                .thenCompose(sdp -> signaling.sendClientMessage(peerPmid, SignalingMessages.offer(sessionId, sdp)))
-                .whenComplete((ignored, throwable) -> {
-                    if (throwable == null) {
-                        chat("Sent OFFER to " + peerPmid);
-                    }
-                })
+                .thenCompose(sdp -> signaling.sendClientMessage(peerPmid, SignalingMessages.offer(sessionId, sdp, minecraft.getUser().getName())))
                 .thenCompose(ignored -> handshake.future())
                 .thenApply(ignored -> null);
         });
@@ -108,12 +106,11 @@ public final class ExperimentalP2PSessionManager implements AutoCloseable {
             String code = message.has("Code") ? message.get("Code").getAsString() : "?";
             String errorMessage = message.has("Message") ? message.get("Message").getAsString() : message.toString();
             String text = "Signaling error from " + peerPmid + ": " + code + " " + errorMessage;
-            chat(text);
+            OfficialP2PBackportClient.LOGGER.warn(text);
             abortHandshakes(text);
             return;
         }
         String type = message.get("type").getAsString();
-        chat("Received " + type + " from " + peerPmid);
         if ("OFFER".equals(type)) {
             handleOffer(peerPmid, message);
         } else if ("ANSWER".equals(type)) {
@@ -130,6 +127,7 @@ public final class ExperimentalP2PSessionManager implements AutoCloseable {
     }
 
     private void handleOffer(UUID peerPmid, JsonObject message) {
+        showConnectingNotice(peerPmid, message);
         String sessionId = message.get("sessionId").getAsString();
         String sdp = message.get("sdp").getAsString();
         signaling.requestTurnAuth()
@@ -141,9 +139,6 @@ public final class ExperimentalP2PSessionManager implements AutoCloseable {
             .whenComplete((ignored, throwable) -> {
                 if (throwable != null) {
                     OfficialP2PBackportClient.LOGGER.warn("Failed to answer P2P offer from {}", peerPmid, throwable);
-                    chat("Failed to answer OFFER from " + peerPmid + ": " + throwable.getClass().getSimpleName());
-                } else {
-                    chat("Sent ANSWER to " + peerPmid);
                 }
             });
     }
@@ -159,7 +154,7 @@ public final class ExperimentalP2PSessionManager implements AutoCloseable {
                 PacketFlow.CLIENTBOUND,
                 minecraft.getDebugOverlay().getBandwidthLogger()
             );
-            ServerData serverData = new ServerData("Official P2P", "rtc-peer", ServerData.Type.LAN);
+            ServerData serverData = new ServerData("FriendLink", "rtc-peer", ServerData.Type.LAN);
             connection.initiateServerboundPlayConnection(
                 "rtc-peer",
                 0,
@@ -252,9 +247,13 @@ public final class ExperimentalP2PSessionManager implements AutoCloseable {
         }
     }
 
-    private void chat(String message) {
-        minecraft.execute(() -> minecraft.gui.getChat().addClientSystemMessage(
-            net.minecraft.network.chat.Component.literal("[OfficialP2P " + OfficialP2PBackportClient.BUILD_MARKER + "] " + message)
-        ));
+    private void showConnectingNotice(UUID peerPmid, JsonObject message) {
+        if (!connectingNotices.add(peerPmid)) {
+            return;
+        }
+        String name = message.has("playerName") && !message.get("playerName").isJsonNull()
+            ? message.get("playerName").getAsString()
+            : peerPmid.toString().substring(0, 8);
+        minecraft.execute(() -> minecraft.gui.getChat().addClientSystemMessage(P2PTexts.c("status.player_connecting", name)));
     }
 }

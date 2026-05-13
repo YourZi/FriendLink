@@ -1,5 +1,7 @@
 package zz.officialp2p.friends;
 
+import zz.officialp2p.i18n.P2PTexts;
+
 public final class OfficialFriendsException extends RuntimeException {
     private final int statusCode;
     private final String operation;
@@ -11,7 +13,7 @@ public final class OfficialFriendsException extends RuntimeException {
     }
 
     private OfficialFriendsException(String operation, int statusCode, String body) {
-        super("Official friends " + operation + " failed with HTTP " + statusCode + ": " + body);
+        super("FriendLink friends " + operation + " failed with HTTP " + statusCode + ": " + body);
         this.statusCode = statusCode;
         this.operation = operation;
     }
@@ -22,11 +24,11 @@ public final class OfficialFriendsException extends RuntimeException {
 
     public String userMessage() {
         return switch (statusCode) {
-            case 400 -> "玩家名或档案不存在";
-            case 401 -> "登录令牌被拒绝，请重新登录";
-            case 403 -> "账号或隐私设置不允许使用官方好友服务";
-            case 429 -> "官方好友服务请求过快，请等一会再刷新";
-            case 500, 502, 503, 504 -> "官方好友服务暂时不可用";
+            case 400 -> P2PTexts.s("error.unknown_profile");
+            case 401 -> P2PTexts.s("error.login_rejected");
+            case 403 -> P2PTexts.s("error.privacy_forbidden");
+            case 429 -> P2PTexts.s("error.rate_limited");
+            case 500, 502, 503, 504 -> P2PTexts.s("error.friend_service_unavailable");
             default -> getMessage();
         };
     }

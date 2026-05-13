@@ -17,7 +17,7 @@ java {
 }
 
 loom {
-    accessWidenerPath = file('src/main/resources/official_p2p_backport.accesswidener')
+    accessWidenerPath = file('src/main/resources/friendlink.accesswidener')
 }
 
 repositories {

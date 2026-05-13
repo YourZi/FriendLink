@@ -4,6 +4,8 @@ FriendLink is an experimental Fabric client mod that backports Minecraft's offic
 
 It uses Mojang/Microsoft services for friends presence, official signaling, TURN auth, and WebRTC transport.
 
+FriendLink is an unofficial Minecraft mod. It is not approved by, endorsed by, or associated with Mojang Studios or Microsoft.
+
 ## Status
 
 Experimental. The current build is focused on validating the official P2P path on Minecraft 26.1.2.
@@ -17,6 +19,7 @@ Experimental. The current build is focused on validating the official P2P path o
 
 ## Notes
 
+- FriendLink does not include, distribute, or replace Minecraft itself.
 - This is not a custom server relay.
 - The official flow depends on Microsoft services and may be unstable on restricted or high-latency networks.
 - Both clients should use the same mod build.

@@ -23,10 +23,10 @@ final class JsonRpcClient implements WebSocket.Listener {
     private final Map<Integer, CompletableFuture<JsonElement>> pendingRequests = new HashMap<>();
     private final StringBuilder messageBuffer = new StringBuilder();
     private CompletableFuture<Void> sendChain = CompletableFuture.completedFuture(null);
-    private WebSocket webSocket;
+    private volatile WebSocket webSocket;
     private int transactionId;
-    private boolean closing;
-    private boolean tornDown;
+    private volatile boolean closing;
+    private volatile boolean tornDown;
 
     JsonRpcClient(ScheduledExecutorService executor, MethodHandler methodHandler, Consumer<Throwable> disconnectHandler) {
         this.executor = executor;
@@ -45,8 +45,12 @@ final class JsonRpcClient implements WebSocket.Listener {
     @Override
     public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
         executor.execute(() -> {
-            appendAndDispatch(data.toString(), last);
-            webSocket.request(1);
+            try {
+                appendAndDispatch(data.toString(), last);
+                webSocket.request(1);
+            } catch (RuntimeException exception) {
+                teardown(new IOException("WebSocket message handling failed", exception), !closing);
+            }
         });
         return CompletableFuture.completedFuture(null);
     }
@@ -66,7 +70,7 @@ final class JsonRpcClient implements WebSocket.Listener {
         CompletableFuture<JsonElement> future = new CompletableFuture<>();
         executor.execute(() -> {
             WebSocket socket = webSocket;
-            if (socket == null) {
+            if (socket == null || tornDown || socket.isOutputClosed()) {
                 future.completeExceptionally(new IOException("WebSocket is not connected"));
                 return;
             }
@@ -87,6 +91,7 @@ final class JsonRpcClient implements WebSocket.Listener {
                         if (pending != null) {
                             pending.completeExceptionally(new IOException("WebSocket send failed", error));
                         }
+                        teardown(new IOException("WebSocket send failed", error), !closing);
                     });
                     return (Void) null;
                 });
@@ -150,14 +155,18 @@ final class JsonRpcClient implements WebSocket.Listener {
 
     private void sendResponse(JsonElement id, JsonElement result) {
         WebSocket socket = webSocket;
-        if (socket == null || id == null) {
+        if (socket == null || id == null || tornDown || socket.isOutputClosed()) {
             return;
         }
         JsonObject response = new JsonObject();
         response.addProperty("jsonrpc", "2.0");
         response.add("id", id);
         response.add("result", result == null ? new JsonObject() : result);
-        sendChain = sendChain.thenCompose(ignored -> socket.sendText(response.toString(), true).thenApply(sent -> (Void) null));
+        sendChain = sendChain.thenCompose(ignored -> socket.sendText(response.toString(), true).thenApply(sent -> (Void) null))
+            .exceptionally(error -> {
+                executor.execute(() -> teardown(new IOException("WebSocket response send failed", error), !closing));
+                return (Void) null;
+            });
     }
 
     void ack(JsonElement id) {
@@ -166,14 +175,23 @@ final class JsonRpcClient implements WebSocket.Listener {
 
     void pong() {
         WebSocket socket = webSocket;
-        if (socket == null) {
+        if (socket == null || tornDown || socket.isOutputClosed()) {
             return;
         }
         JsonObject notification = new JsonObject();
         notification.addProperty("jsonrpc", "2.0");
         notification.addProperty("method", "System_Pong_v1_0");
         notification.add("params", new JsonArray());
-        sendChain = sendChain.thenCompose(ignored -> socket.sendText(notification.toString(), true).thenApply(sent -> (Void) null));
+        sendChain = sendChain.thenCompose(ignored -> socket.sendText(notification.toString(), true).thenApply(sent -> (Void) null))
+            .exceptionally(error -> {
+                executor.execute(() -> teardown(new IOException("WebSocket pong send failed", error), !closing));
+                return (Void) null;
+            });
+    }
+
+    boolean isUsable() {
+        WebSocket socket = webSocket;
+        return socket != null && !tornDown && !socket.isInputClosed() && !socket.isOutputClosed();
     }
 
     private void teardown(Throwable error, boolean notify) {

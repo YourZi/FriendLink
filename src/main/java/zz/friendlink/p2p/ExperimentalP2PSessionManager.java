@@ -56,8 +56,7 @@ public final class ExperimentalP2PSessionManager implements AutoCloseable {
     }
 
     public CompletableFuture<Void> connectSignaling() {
-        abortHandshakes("signaling reconnect");
-        return signaling.reconnect();
+        return signaling.connect();
     }
 
     public CompletableFuture<PresenceResponse> publishHostedPresence() {
@@ -212,7 +211,7 @@ public final class ExperimentalP2PSessionManager implements AutoCloseable {
                 return;
             }
 
-            signaling.reconnect()
+            signaling.connect()
                 .thenCompose(ignored -> HostPresencePublisher.postHosted(minecraft))
                 .whenComplete((presence, throwable) -> {
                     if (throwable != null) {

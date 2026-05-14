@@ -58,9 +58,22 @@ public final class SignalingServiceClient implements AutoCloseable {
 
     public CompletableFuture<Void> connect() {
         CompletableFuture<JsonRpcClient> existingConnect = websocketConnect;
-        if (existingConnect != null && !existingConnect.isCompletedExceptionally()) {
-            return existingConnect.thenApply(ignored -> null);
+        if (existingConnect != null) {
+            return existingConnect.thenCompose(rpc -> {
+                if (rpc.isUsable()) {
+                    return CompletableFuture.<Void>completedFuture(null);
+                }
+                websocketConnect = null;
+                return openConnection().<Void>thenApply(ignored -> null);
+            }).exceptionallyCompose(error -> {
+                websocketConnect = null;
+                return openConnection().<Void>thenApply(ignored -> null);
+            });
         }
+        return openConnection().<Void>thenApply(ignored -> null);
+    }
+
+    private CompletableFuture<JsonRpcClient> openConnection() {
         FriendLinkClient.LOGGER.info("FriendLink signaling connect start");
         return CompletableFuture.supplyAsync(() -> {
             HttpClient client = HttpClient.newBuilder()
@@ -75,7 +88,7 @@ public final class SignalingServiceClient implements AutoCloseable {
             return websocketConnect;
         }, executor).thenCompose(future -> future).thenApply(rpc -> {
             FriendLinkClient.LOGGER.info("FriendLink signaling connected");
-            return null;
+            return rpc;
         });
     }
 
@@ -281,17 +294,6 @@ public final class SignalingServiceClient implements AutoCloseable {
 
     @Override
     public void close() {
-        disconnect();
-    }
-
-    private static final class TurnAuthResult {
-        long expirationInSeconds;
-        List<TurnAuthServer> turnAuthServers;
-    }
-
-    private static final class TurnAuthServer {
-        String Username;
-        String Password;
-        List<String> Urls;
+        disconnect().whenComplete((ignored, error) -> executor.shutdownNow());
     }
 }

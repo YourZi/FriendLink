@@ -19,7 +19,7 @@ public abstract class PauseScreenMixin extends Screen {
     }
 
     @Inject(method = "init", at = @At("TAIL"))
-    private void officialP2P$addButton(CallbackInfo ci) {
+    private void friendLink$addButton(CallbackInfo ci) {
         this.addRenderableWidget(Button.builder(P2PTexts.c("button.p2p_host"), button -> {
                 button.setMessage(P2PTexts.c("button.listening"));
                 button.active = false;

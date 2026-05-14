@@ -128,6 +128,10 @@ public final class OfficialFriendsClient {
         return putFriendAction(FriendActionRequest.removeById(profileId));
     }
 
+    public FriendData removeFriend(UUID profileId) {
+        return putFriendAction(FriendActionRequest.removeById(profileId));
+    }
+
     public ProfileLookup lookupProfileByName(String name) {
         String cleanedName = name == null ? "" : name.trim();
         if (cleanedName.isBlank()) {

@@ -4,6 +4,7 @@
   "version": "${version}",
   "name": "FriendLink",
   "description": "Friend-based official P2P multiplayer backport for Minecraft 26.1.2.",
+  "icon": "assets/friendlink/icon.png",
   "authors": [
     "ZzaiQWQ"
   ],

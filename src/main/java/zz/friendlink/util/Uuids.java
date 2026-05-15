@@ -19,6 +19,14 @@ public final class Uuids {
         return UUID.fromString(cleaned);
     }
 
+    public static UUID parseFlexibleOrNull(String value) {
+        try {
+            return parseFlexible(value);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
     private static boolean isHex(int character) {
         return (character >= '0' && character <= '9') || (character >= 'a' && character <= 'f');
     }

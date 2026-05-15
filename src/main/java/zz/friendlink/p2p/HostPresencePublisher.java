@@ -6,6 +6,8 @@ import zz.friendlink.friends.model.JoinInfoUpdate;
 import zz.friendlink.friends.model.PresenceResponse;
 
 import java.net.ProxySelector;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public final class HostPresencePublisher {
@@ -17,11 +19,15 @@ public final class HostPresencePublisher {
     }
 
     public static CompletableFuture<PresenceResponse> postHosted(Minecraft client) {
-        return post(client, PLAYING_HOSTED_SERVER);
+        return postHosted(client, Set.of());
+    }
+
+    public static CompletableFuture<PresenceResponse> postHosted(Minecraft client, Set<UUID> invitedPlayers) {
+        return post(client, PLAYING_HOSTED_SERVER, new JoinInfoUpdate(null, Set.copyOf(invitedPlayers)));
     }
 
     public static CompletableFuture<PresenceResponse> postCurrent(Minecraft client) {
-        return post(client, currentStatus(client));
+        return post(client, currentStatus(client), JoinInfoUpdate.emptyInvites());
     }
 
     public static String currentStatus(Minecraft client) {
@@ -34,9 +40,9 @@ public final class HostPresencePublisher {
         return ONLINE;
     }
 
-    private static CompletableFuture<PresenceResponse> post(Minecraft client, String status) {
+    public static CompletableFuture<PresenceResponse> post(Minecraft client, String status, JoinInfoUpdate joinInfoUpdate) {
         String accessToken = client.getUser().getAccessToken();
         return CompletableFuture.supplyAsync(() -> new OfficialFriendsClient(accessToken, ProxySelector.getDefault())
-            .presence(status, JoinInfoUpdate.emptyInvites()));
+            .presence(status, joinInfoUpdate));
     }
 }

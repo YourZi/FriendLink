@@ -1,15 +1,50 @@
+# Gradle files
+gradle/
 .gradle/
-.gradle-user-home/
-.mc26_2/
 build/
 out/
+gradle/kotlin/
+src/generated/resources/.cache
+.github/
+.eclipse/
+*.md
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# IntelliJ IDEA
 .idea/
 *.iml
+*.ipr
+*.iws
+out/
 
-*.log
-*.tmp
-*.bak
+# VS Code
+.vscode/
+.factorypath
 
+# Mac OS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Run folders (NeoForge/Minecraft)
 run/
+runs/
+run-server/
+run-client/
+run-data/
 logs/
 crash-reports/
+debug/
+config/
+gradle/
+
+# Logs
+*.log

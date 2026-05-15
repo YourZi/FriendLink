@@ -223,12 +223,23 @@ public final class SignalingServiceClient implements AutoCloseable {
             from = getUuid(envelope, "from", "From", "fromPlayerId", "FromPlayerId", "playerId", "PlayerId");
             payload = getPayload(getField(envelope, "message", "Message", "payload", "Payload"));
         } else if (array.size() >= 3) {
-            from = Uuids.parseFlexible(array.get(1).getAsString());
+            from = Uuids.parseFlexibleOrNull(array.get(1).getAsString());
             payload = getPayload(array.get(2));
         } else if (array.size() >= 2) {
-            from = Uuids.parseFlexible(array.get(0).getAsString());
+            from = Uuids.parseFlexibleOrNull(array.get(0).getAsString());
             payload = getPayload(array.get(1));
         } else {
+            return;
+        }
+
+        if (payload.has("Code") || payload.has("code")) {
+            int code = payload.has("Code") ? payload.get("Code").getAsInt() : payload.get("code").getAsInt();
+            String msg = payload.has("Message") ? payload.get("Message").getAsString() : payload.toString();
+            FriendLinkClient.LOGGER.warn("Signaling error from {}: code={} {}", from, code, msg);
+            return;
+        }
+
+        if (from == null || payload == null) {
             return;
         }
 
@@ -241,10 +252,10 @@ public final class SignalingServiceClient implements AutoCloseable {
         for (String name : names) {
             JsonElement value = object.get(name);
             if (value != null && !value.isJsonNull()) {
-                return Uuids.parseFlexible(value.getAsString());
+                return Uuids.parseFlexibleOrNull(value.getAsString());
             }
         }
-        throw new IllegalArgumentException("No UUID field in signaling message: " + object);
+        return null;
     }
 
     private static JsonElement getField(JsonObject object, String... names) {

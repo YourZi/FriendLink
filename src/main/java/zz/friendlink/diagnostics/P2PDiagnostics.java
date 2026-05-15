@@ -20,19 +20,35 @@ public final class P2PDiagnostics {
         boolean webRtcApiPresent = classPresent(WEBRTC_FACTORY_CLASS, missingClasses)
             && classPresent(WEBRTC_PEER_CLASS, missingClasses);
 
-        Optional<String> xuid = user.getXuid();
-        Optional<String> clientId = user.getClientId();
+        boolean hasXuid = hasXuid(user);
+        boolean hasClientId = hasClientId(user);
         boolean hasToken = user.getAccessToken() != null && !user.getAccessToken().isBlank();
 
         return new P2PStatus(
             user.getName(),
             user.getProfileId().toString(),
             hasToken,
-            xuid.isPresent(),
-            clientId.isPresent(),
+            hasXuid,
+            hasClientId,
             webRtcApiPresent,
             missingClasses
         );
+    }
+
+    private static boolean hasXuid(User user) {
+        try {
+            return user.getXuid().isPresent();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static boolean hasClientId(User user) {
+        try {
+            return user.getClientId().isPresent();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private static boolean classPresent(String className, List<String> missingClasses) {

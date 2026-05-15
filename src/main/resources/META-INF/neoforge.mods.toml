@@ -1,0 +1,21 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "GPL-3.0-only"
+
+[[mods]]
+modId = "friendlink"
+version = "${version}"
+displayName = "FriendLink"
+logoFile = "assets/friendlink/icon.png"
+authors = "ZzaiQWQ"
+description = "Friend-based official P2P multiplayer backport for Minecraft 1.21.1."
+
+[[dependencies.friendlink]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[mixins]]
+config = "friendlink.mixins.json"

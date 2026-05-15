@@ -1,5 +1,6 @@
 plugins {
-    id 'net.fabricmc.fabric-loom' version '1.16.0-alpha.12'
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.140'
 }
 
 version = project.mod_version
@@ -11,36 +12,73 @@ base {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(21)
     }
     withSourcesJar()
 }
 
-loom {
-    accessWidenerPath = file('src/main/resources/friendlink.accesswidener')
+configurations {
+    bundledLibraries
+    implementation.extendsFrom bundledLibraries
 }
 
 repositories {
+    maven { name = 'NeoForged'; url = 'https://maven.neoforged.net/releases' }
+    maven { name = 'MinecraftLibraries'; url = 'https://libraries.minecraft.net/' }
+    mavenCentral()
+}
+
+neoForge {
+    version = project.neoforge_version
+
+    runs {
+        client {
+            client()
+            jvmArguments = ['--add-reads=friendlink=ALL-UNNAMED']
+        }
+        server {
+            server()
+        }
+    }
+
+    mods {
+        friendlink {
+            sourceSet sourceSets.main
+        }
+    }
 }
 
 dependencies {
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-    implementation "dev.onvoid.webrtc:webrtc-java:${project.webrtc_version}"
-    runtimeOnly "dev.onvoid.webrtc:webrtc-java:${project.webrtc_version}:windows-x86_64"
-    include "dev.onvoid.webrtc:webrtc-java:${project.webrtc_version}"
-    include "dev.onvoid.webrtc:webrtc-java:${project.webrtc_version}:windows-x86_64"
+    bundledLibraries "dev.onvoid.webrtc:webrtc-java:${project.webrtc_version}"
+    bundledLibraries "dev.onvoid.webrtc:webrtc-java:${project.webrtc_version}:windows-x86_64"
+
+    // NeoForge 1.21.1 dev runs do not automatically expose non-Minecraft libraries.
+    additionalRuntimeClasspath "dev.onvoid.webrtc:webrtc-java:${project.webrtc_version}"
+    additionalRuntimeClasspath "dev.onvoid.webrtc:webrtc-java:${project.webrtc_version}:windows-x86_64"
 }
 
 processResources {
     inputs.property 'version', project.version
-    filesMatching('fabric.mod.json') {
+    filesMatching('META-INF/neoforge.mods.toml') {
         expand 'version': project.version
     }
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    options.release = 25
+    options.release = 21
+}
+
+tasks.named('jar', Jar).configure {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from({
+        configurations.bundledLibraries.collect { dependency ->
+            dependency.isDirectory() ? dependency : zipTree(dependency)
+        }
+    }) {
+        exclude 'META-INF/MANIFEST.MF'
+        exclude 'META-INF/*.SF'
+        exclude 'META-INF/*.DSA'
+        exclude 'META-INF/*.RSA'
+    }
 }

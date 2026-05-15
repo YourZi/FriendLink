@@ -39,6 +39,10 @@ public final class P2PUiActions {
     }
 
     public static CompletableFuture<Void> connect(Minecraft client, UUID peerPmid, Consumer<String> statusSink) {
+        if (client.level != null && client.getSingleplayerServer() == null) {
+            status(client, statusSink, P2PTexts.s("status.join_needs_leaving"));
+            return CompletableFuture.completedFuture(null);
+        }
         status(client, statusSink, P2PTexts.s("status.resolving_host", peerPmid));
         ExperimentalP2PSessionManager manager = FriendLinkClient.experimentalManager(client);
         return PeerTargetResolver.resolve(client, peerPmid)
@@ -62,13 +66,29 @@ public final class P2PUiActions {
             }));
     }
 
+    public static CompletableFuture<Void> invite(Minecraft client, UUID profileId, Consumer<String> statusSink) {
+        status(client, statusSink, P2PTexts.s("status.inviting_friend"));
+        ExperimentalP2PSessionManager manager = FriendLinkClient.experimentalManager(client);
+        return manager.inviteFriend(profileId)
+            .orTimeout(20, TimeUnit.SECONDS)
+            .whenComplete((ignored, throwable) -> client.execute(() -> {
+                if (throwable != null) {
+                    Throwable cause = throwable.getCause() == null ? throwable : throwable.getCause();
+                    status(client, statusSink, P2PTexts.s("status.invite_failed", shortError(cause)));
+                    return;
+                }
+                status(client, statusSink, P2PTexts.s("status.invite_success"));
+            }))
+            .thenApply(ignored -> null);
+    }
+
     public static void status(Minecraft client, Consumer<String> statusSink, String message) {
         FriendLinkClient.LOGGER.info("[FriendLink UI] {}", message);
         if (statusSink != null) {
             statusSink.accept(message);
         }
         Component component = Component.literal("[FriendLink] " + message);
-        client.gui.getChat().addClientSystemMessage(component);
+        client.gui.getChat().addMessage(component);
     }
 
     private static String shortError(Throwable cause) {

@@ -11,7 +11,7 @@ public final class BackportedServerConnectionAcceptor {
     }
 
     public static void acceptChannel(ServerConnectionListener listener, Channel channel) {
-        Connection connection = BackportedConnectionFactory.fromChannel(channel, PacketFlow.SERVERBOUND, null);
+        Connection connection = BackportedConnectionFactory.fromChannel(channel, PacketFlow.SERVERBOUND);
         connection.setListenerForServerboundHandshake(new ServerHandshakePacketListenerImpl(listener.getServer(), connection));
         listener.getConnections().add(connection);
     }
